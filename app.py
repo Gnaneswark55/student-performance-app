@@ -33,9 +33,15 @@ if uploaded_file is not None:
     X = df_copy.drop('result', axis=1)
     y = df_copy['result']
 
-    # Scale
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+   # Keep only numeric columns
+X = X.select_dtypes(include=['int64', 'float64'])
+
+# Fill missing values (important)
+X = X.fillna(0)
+
+# Scale
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
 
     # Train model
     model = RandomForestClassifier()
