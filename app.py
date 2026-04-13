@@ -1,56 +1,27 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.ensemble import RandomForestClassifier
+# Preprocessing
+df_copy = df.copy()
 
-st.title("🎓 Student Performance Prediction System")
+# Convert categorical to numeric
+from sklearn.preprocessing import LabelEncoder
+le = LabelEncoder()
 
-uploaded_file = st.file_uploader("Upload CSV File", type=["csv"])
+for col in df_copy.columns:
+    if df_copy[col].dtype == 'object':
+        df_copy[col] = le.fit_transform(df_copy[col])
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file, sep=';')
-    st.write("Data Preview", df.head())
+# Create target
+if 'G3' in df_copy.columns:
+    df_copy['result'] = df_copy['G3'].apply(lambda x: 1 if x >= 10 else 0)
+    df_copy = df_copy.drop(['G3'], axis=1)
 
-    df_copy = df.copy()
+# Split features and target
+X = df_copy.drop('result', axis=1)
+y = df_copy['result']
 
-    le = LabelEncoder()
-    for col in df_copy.columns:
-        if df_copy[col].dtype == 'object':
-            df_copy[col] = le.fit_transform(df_copy[col])
+# 🔥 IMPORTANT: ensure all numeric
+X = X.astype(float)
 
-    if 'G3' in df_copy.columns:
-        df_copy['result'] = df_copy['G3'].apply(lambda x: 1 if x >= 10 else 0)
-        df_copy = df_copy.drop(['G3'], axis=1)
-
-    X = df_copy.drop('result', axis=1)
-    y = df_copy['result']
-
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-
-    model = RandomForestClassifier()
-    model.fit(X_scaled, y)
-
-    predictions = model.predict(X_scaled)
-
-    df['Result'] = ['Pass' if p == 1 else 'Fail' for p in predictions]
-
-    def detect_weakness(row):
-        weak = []
-        if row.get('studytime', 0) <= 1:
-            weak.append("Low Study Time")
-        if row.get('failures', 0) > 0:
-            weak.append("Past Failures")
-        if row.get('absences', 0) > 5:
-            weak.append("High Absences")
-        return ", ".join(weak)
-
-    df['Weak Areas'] = df.apply(detect_weakness, axis=1)
-
-    st.write("Results", df)
-
-    df.to_excel("results.xlsx", index=False)
-
-    with open("results.xlsx", "rb") as file:
-        st.download_button("Download Results", file, file_name="results.xlsx")
+# Scaling
+from sklearn.preprocessing import StandardScaler
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
