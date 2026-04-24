@@ -15,13 +15,16 @@ if uploaded_file:
 
     df_copy = df.copy()
 
-    # Encoding
+    # ----------- FIX 1: HANDLE MISSING VALUES -----------
+    df_copy = df_copy.fillna(0)
+
+    # ----------- FIX 2: ENCODING SAFE -----------
     le = LabelEncoder()
     for col in df_copy.columns:
         if df_copy[col].dtype == 'object':
-            df_copy[col] = le.fit_transform(df_copy[col])
+            df_copy[col] = le.fit_transform(df_copy[col].astype(str))
 
-    # Target creation
+    # ----------- TARGET CREATION -----------
     if 'G3' in df_copy.columns:
         df_copy['result'] = df_copy['G3'].apply(lambda x: 1 if x >= 10 else 0)
         df_copy = df_copy.drop(['G3'], axis=1)
@@ -29,18 +32,21 @@ if uploaded_file:
     X = df_copy.drop('result', axis=1)
     y = df_copy['result']
 
-    # Scaling
+    # ----------- FIX 3: FORCE NUMERIC -----------
+    X = X.apply(pd.to_numeric, errors='coerce')
+    X = X.fillna(0)
+
+    # ----------- SCALING -----------
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # Model
+    # ----------- MODEL -----------
     model = RandomForestClassifier()
     model.fit(X_scaled, y)
 
     predictions = model.predict(X_scaled)
 
-    # ----------- NEW PART (METRICS) -----------
-
+    # ----------- METRICS -----------
     total_students = len(predictions)
     pass_count = np.sum(predictions == 1)
     fail_count = np.sum(predictions == 0)
@@ -50,8 +56,7 @@ if uploaded_file:
 
     accuracy = accuracy_score(y, predictions)
 
-    # ----------- DISPLAY DASHBOARD -----------
-
+    # ----------- DASHBOARD -----------
     st.subheader("📊 Model Performance Summary")
 
     c1, c2, c3, c4 = st.columns(4)
@@ -65,7 +70,6 @@ if uploaded_file:
     st.write(f"Fail Percentage: {fail_percent:.2f}%")
 
     # ----------- RESULTS TABLE -----------
-
     df['Result'] = ['Pass' if p == 1 else 'Fail' for p in predictions]
 
     def detect_weakness(row):
@@ -83,7 +87,6 @@ if uploaded_file:
     st.write("Results", df)
 
     # ----------- DOWNLOAD -----------
-
     df.to_excel("results.xlsx", index=False)
 
     with open("results.xlsx", "rb") as file:
